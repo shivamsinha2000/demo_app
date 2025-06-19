@@ -4,7 +4,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Hello from Flask app with Jenkins & Docker on AWS AUtomation wORKING 1..1!"
+    return "Hello from Flask app with Jenkins & Docker on AWS AUtomation wORKING 1..1! Now start building pythion script"
 
 @app.route("/health")
 def health():
