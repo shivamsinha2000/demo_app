@@ -47,7 +47,7 @@ pipeline {
 
         stage('Deploy on EC2') {
             steps {
-                sshagent(['ssh-ec2-creds']) {
+                sshagent(['ec2-key']) {
                     sh """
                     ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << EOF
                         docker stop flask_app || true
