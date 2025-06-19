@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 APP_NAME="flask-cicd"
-IMAGE_NAME="your-dockerhub-username/$APP_NAME"
+IMAGE_NAME="shivamsinha2000/$APP_NAME"
 
 echo "Pulling image..."
 docker pull $IMAGE_NAME
