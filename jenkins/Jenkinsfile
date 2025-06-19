@@ -1,49 +1,40 @@
 pipeline {
     agent any
-
+    
     environment {
-        DOCKER_IMAGE = "shivamsinha2000/flask-cicd"
-        DOCKER_TAG = "${env.BUILD_NUMBER}"
-        EC2_IP = "54.197.139.136"          // Replace with your EC2 public IP
-        SSH_USER = "ubuntu"                // Usually ubuntu for AWS EC2
+        DOCKER_HUB_CREDENTIALS = credentials('dockerhub-id')
+        EC2_SSH_KEY = credentials('ec2-ssh-key-id')
+        EC2_IP = '54.197.139.136'
+        EC2_USER = 'ubuntu'
     }
-
+    
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/shivamsinha2000/demo_app.git', branch: 'main' // Your GitHub repo
+                git branch: 'main', url: 'https://github.com/shivamsinha2000/demo_app.git'
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:latest")
+                    dockerImage = docker.build("yourdockerhubusername/flask-app:${env.BUILD_ID}")
                 }
             }
         }
-
         stage('Push Docker Image') {
             steps {
                 script {
-                    docker.withRegistry('', 'dockerhub-credentials') {
-                        docker.image("${DOCKER_IMAGE}:latest").push()
+                    docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-id') {
+                        dockerImage.push()
                     }
                 }
             }
         }
-
         stage('Deploy to EC2') {
             steps {
-                sshagent(['ec2-ssh-key']) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ${SSH_USER}@${EC2_IP} << EOF
-                        docker pull ${DOCKER_IMAGE}:latest
-                        docker stop flask-cicd || true
-                        docker rm flask-cicd || true
-                        docker run -d --name flask-cicd -p 80:5000 ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    EOF
-                    """
+                sshagent(['ec2-ssh-key-id']) {
+                    sh "scp -o StrictHostKeyChecking=no docker-compose.yml ubuntu@${EC2_IP}:~/"
+                    sh "ssh -o StrictHostKeyChecking=no ubuntu@${EC2_IP} 'bash ~/deploy.sh'"
                 }
             }
         }
