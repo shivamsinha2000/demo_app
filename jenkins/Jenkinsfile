@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'shivamsinha2000/flask-cicd'
+    }
+
+    stages {
+        stage('Clone Repo') {
+            steps {
+                git 'https://github.com/shivamsinha2000/devops-flask-cicd.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    dockerImage = docker.build(DOCKER_IMAGE)
+                }
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    script {
+                        docker.withRegistry('', 'dockerhub-creds') {
+                            dockerImage.push()
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy on EC2') {
+            steps {
+                sshagent(['ec2-key']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@<your-ec2-ip> 'bash -s' < scripts/deploy.sh
+                    '''
+                }
+            }
+        }
+    }
+}
