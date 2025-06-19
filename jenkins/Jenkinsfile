@@ -6,7 +6,7 @@ pipeline {
         IMAGE_TAG = 'latest'  // or a version/tag you want
         FULL_IMAGE = "${DOCKER_IMAGE}:${IMAGE_TAG}"
         EC2_USER = 'ubuntu'
-        EC2_IP = '54.197.139.136'
+        EC2_IP = '54.90.214.171'
     }
 
     stages {
