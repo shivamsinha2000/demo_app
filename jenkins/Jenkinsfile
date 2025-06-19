@@ -2,42 +2,48 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'shivamsinha2000/flask-cicd'
+        DOCKER_IMAGE = "shivamsinha2000/flask-cicd"
+        DOCKER_TAG = "${env.BUILD_NUMBER}"
+        EC2_IP = "54.197.139.136"          // Replace with your EC2 public IP
+        SSH_USER = "ubuntu"                // Usually ubuntu for AWS EC2
     }
 
     stages {
-        stage('Clone Repo') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/shivamsinha2000/demo_app.git'
+                git url: 'https://github.com/shivamsinha2000/demo_app.git', branch: 'main' // Your GitHub repo
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build(DOCKER_IMAGE)
+                    docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
                 }
             }
         }
 
-        stage('Push to DockerHub') {
+        stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    script {
-                        docker.withRegistry('', 'dockerhub-creds') {
-                            dockerImage.push()
-                        }
+                script {
+                    docker.withRegistry('', 'dockerhub-credentials') {
+                        docker.image("${DOCKER_IMAGE}:${DOCKER_TAG}").push()
                     }
                 }
             }
         }
 
-        stage('Deploy on EC2') {
+        stage('Deploy to EC2') {
             steps {
-                sshagent(['ec2-key']) {
-                    sh '''
-                    ssh -o StrictHostKeyChecking=no ubuntu@54.197.139.136 'bash -s' < scripts/deploy.sh
-                    '''
+                sshagent(['ec2-ssh-key']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ${SSH_USER}@${EC2_IP} << EOF
+                        docker pull ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker stop flask-cicd || true
+                        docker rm flask-cicd || true
+                        docker run -d --name flask-cicd -p 80:5000 ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    EOF
+                    """
                 }
             }
         }
