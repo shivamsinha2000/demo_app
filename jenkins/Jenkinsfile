@@ -2,7 +2,11 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'shivamsinha2000/demo-app:latest'
+        DOCKER_IMAGE = 'shivamsinha2000/flask-cicd'
+        IMAGE_TAG = 'latest'  // or a version/tag you want
+        FULL_IMAGE = "${DOCKER_IMAGE}:${IMAGE_TAG}"
+        EC2_USER = 'ubuntu'
+        EC2_IP = '54.197.139.136'
     }
 
     stages {
@@ -15,16 +19,27 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build(DOCKER_IMAGE)
+                    dockerImage = docker.build(FULL_IMAGE)
                 }
             }
         }
 
-        stage('Push to DockerHub') {
+        stage('Login to DockerHub') {
             steps {
                 script {
                     docker.withRegistry('', 'dockerhub-creds') {
-                        dockerImage.push()
+                        echo 'Logged into DockerHub'
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('', 'dockerhub-creds') {
+                        dockerImage.push(IMAGE_TAG)
+                        dockerImage.push('latest')  // optionally push latest tag too
                     }
                 }
             }
@@ -33,14 +48,15 @@ pipeline {
         stage('Deploy on EC2') {
             steps {
                 sshagent(['ssh-ec2-creds']) {
-            		sh """
-            		ssh -o StrictHostKeyChecking=no ubuntu@<EC2_IP> << EOF
-            		docker stop flask_app || true
-            		docker rm flask_app || true
-            		docker pull $DOCKER_IMAGE
-            		docker run -d --name flask_app -p 5000:5000 $DOCKER_IMAGE
-            		EOF
-           		"""
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_IP} << EOF
+                        docker stop flask_app || true
+                        docker rm flask_app || true
+                        docker pull ${FULL_IMAGE}
+                        docker run -d --name flask_app -p 5000:5000 ${FULL_IMAGE}
+                    EOF
+                    """
+                }
             }
         }
     }
