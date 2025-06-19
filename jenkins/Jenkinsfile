@@ -18,7 +18,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
+                    docker.build("${DOCKER_IMAGE}:latest")
                 }
             }
         }
@@ -27,7 +27,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('', 'dockerhub-credentials') {
-                        docker.image("${DOCKER_IMAGE}:${DOCKER_TAG}").push()
+                        docker.image("${DOCKER_IMAGE}:latest").push()
                     }
                 }
             }
@@ -38,7 +38,7 @@ pipeline {
                 sshagent(['ec2-ssh-key']) {
                     sh """
                     ssh -o StrictHostKeyChecking=no ${SSH_USER}@${EC2_IP} << EOF
-                        docker pull ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker pull ${DOCKER_IMAGE}:latest
                         docker stop flask-cicd || true
                         docker rm flask-cicd || true
                         docker run -d --name flask-cicd -p 80:5000 ${DOCKER_IMAGE}:${DOCKER_TAG}
