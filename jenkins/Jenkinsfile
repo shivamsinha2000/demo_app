@@ -36,7 +36,7 @@ pipeline {
             steps {
                 sshagent(['ec2-key']) {
                     sh '''
-                    ssh -o StrictHostKeyChecking=no ubuntu@<your-ec2-ip> 'bash -s' < scripts/deploy.sh
+                    ssh -o StrictHostKeyChecking=no ubuntu@54.197.139.136 'bash -s' < scripts/deploy.sh
                     '''
                 }
             }
